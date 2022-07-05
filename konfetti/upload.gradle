@@ -1,0 +1,45 @@
+apply plugin: 'maven-publish'
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
+}
+//加载资源
+Properties properties = new Properties()
+InputStream inputStream = project.rootProject.file('local.properties').newDataInputStream();
+properties.load(inputStream)
+//读取字段
+def workout_maven_psw = properties.getProperty('workout_maven_psw')
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId 'nl.dionsegijn'
+            artifactId 'konfetti'
+            version = android.defaultConfig.versionName
+            artifact(androidSourcesJar)
+            afterEvaluate {
+                artifact(bundleReleaseAar)
+            }
+            pom.withXml {
+                def dependenciesNode = asNode().appendNode('dependencies')
+                configurations.api.allDependencies.each {
+                    if (it.group != null && it.name != null && it.version != null) {
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven{
+            url = 'https://maven.drojian.dev/repository/workout-release/'
+            credentials {
+                username = 'workout-coder'
+                password = workout_maven_psw
+            }
+        }
+    }
+}
